@@ -44,8 +44,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tdcolvin.bleclient.ui.theme.BLEClientTheme
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -97,16 +102,25 @@ fun MainScreen(viewModel: BLEClientViewModel = viewModel()) {
     if (!allPermissionsGranted) {
         PermissionsRequiredScreen { allPermissionsGranted = true }
     }
-    else if (uiState.selectedDevice == null) {
+    else if (uiState.activeDevice == null) {
         ScanningScreen(
-            uiState.isScanning,
-            uiState.foundDevices,
-            viewModel::startScanning,
-            viewModel::stopScanning
+            isScanning = uiState.isScanning,
+            foundDevices = uiState.foundDevices,
+            startScanning = viewModel::startScanning,
+            stopScanning = viewModel::stopScanning,
+            selectDevice = { device ->
+                viewModel.stopScanning()
+                viewModel.setActiveDevice(device)
+            }
         )
     }
     else {
-        DeviceScreen()
+        DeviceScreen(
+            isDeviceConnected = uiState.isDeviceConnected,
+            serviceUuids = uiState.discoveredServicesUuids,
+            connect = viewModel::connectActiveDevice,
+            discoverServices = viewModel::discoverActiveDeviceServices
+        )
     }
 }
 
@@ -136,7 +150,8 @@ fun ScanningScreen(
     isScanning: Boolean,
     foundDevices: List<BluetoothDevice>,
     startScanning: () -> Unit,
-    stopScanning: () -> Unit
+    stopScanning: () -> Unit,
+    selectDevice: (BluetoothDevice) -> Unit
 ) {
     Column (
         Modifier.padding(horizontal = 10.dp)
@@ -158,14 +173,17 @@ fun ScanningScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(foundDevices) { device ->
-                DeviceItem(deviceName = device.name)
+                DeviceItem(
+                    deviceName = device.name,
+                    selectDevice = { selectDevice(device) }
+                )
             }
         }
     }
 }
 
 @Composable
-fun DeviceItem(deviceName: String?) {
+fun DeviceItem(deviceName: String?, selectDevice: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth(),
@@ -178,7 +196,7 @@ fun DeviceItem(deviceName: String?) {
                 text = deviceName ?: "[Unnamed]",
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = { }) {
+            Button(onClick = selectDevice) {
                 Text("Connect")
             }
         }
@@ -186,15 +204,45 @@ fun DeviceItem(deviceName: String?) {
 }
 
 @Composable
-fun DeviceScreen() {
-
+fun DeviceScreen(
+    isDeviceConnected: Boolean,
+    serviceUuids: List<String>,
+    connect: () -> Unit,
+    discoverServices: () -> Unit
+) {
+    Column {
+        Text("Device connected: $isDeviceConnected")
+        Button(onClick = connect) {
+            Text("1. Connect")
+        }
+        Button(onClick = discoverServices, enabled = isDeviceConnected) {
+            Text("2. Discover Services")
+        }
+        LazyColumn {
+            items(serviceUuids) {
+                Text(it)
+            }
+        }
+    }
 }
 
-class BLEClientViewModel(application: Application): AndroidViewModel(application) {
+@OptIn(ExperimentalCoroutinesApi::class)
+class BLEClientViewModel(private val application: Application): AndroidViewModel(application) {
     private val bleClient = BLEClient(application)
+    private var activeConnection = MutableStateFlow<BLEDeviceConnection?>(null)
+
+    private val isDeviceConnected = activeConnection.flatMapLatest { it?.isConnected ?: flowOf(false) }
+    private val activeDeviceServices = activeConnection.flatMapLatest {
+        it?.services ?: flowOf(emptyList())
+    }
 
     private val _uiState = MutableStateFlow(BLEClientUIState())
-    val uiState = _uiState.asStateFlow()
+    val uiState = combine(_uiState, isDeviceConnected, activeDeviceServices) { state, isDeviceConnected, services ->
+        state.copy(
+            isDeviceConnected = isDeviceConnected,
+            discoveredServicesUuids = services.map { it.uuid.toString() }
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BLEClientUIState())
 
     init {
         viewModelScope.launch {
@@ -219,8 +267,19 @@ class BLEClientViewModel(application: Application): AndroidViewModel(application
         bleClient.stopScanning()
     }
 
-    fun selectDevice(device: BluetoothDevice?) {
-        _uiState.update { it.copy(selectedDevice = device) }
+    @SuppressLint("MissingPermission")
+    @RequiresPermission(allOf = [PERMISSION_BLUETOOTH_CONNECT, PERMISSION_BLUETOOTH_SCAN])
+    fun setActiveDevice(device: BluetoothDevice?) {
+        activeConnection.value = device?.run { BLEDeviceConnection(application, device) }
+        _uiState.update { it.copy(activeDevice = device) }
+    }
+    
+    fun connectActiveDevice() {
+        activeConnection.value?.connect()
+    }
+
+    fun discoverActiveDeviceServices() {
+        activeConnection.value?.discoverServices()
     }
 
     override fun onCleared() {
@@ -242,11 +301,13 @@ class BLEClientViewModel(application: Application): AndroidViewModel(application
 data class BLEClientUIState(
     val isScanning: Boolean = false,
     val foundDevices: List<BluetoothDevice> = emptyList(),
-    val selectedDevice: BluetoothDevice? = null
+    val activeDevice: BluetoothDevice? = null,
+    val isDeviceConnected: Boolean = false,
+    val discoveredServicesUuids: List<String> = emptyList(),
 )
 
 @Preview
 @Composable
 fun PreviewDeviceItem() {
-    DeviceItem(deviceName = "A test BLE device")
+    DeviceItem(deviceName = "A test BLE device", selectDevice = { })
 }

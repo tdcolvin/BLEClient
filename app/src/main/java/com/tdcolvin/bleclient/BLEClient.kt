@@ -59,4 +59,6 @@ class BLEClient(context: Context) {
         scanner.stopScan(scanCallback)
         isScanning.value = false
     }
+
+
 }
