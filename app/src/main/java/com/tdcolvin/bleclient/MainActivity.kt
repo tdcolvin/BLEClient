@@ -35,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -117,7 +118,7 @@ fun MainScreen(viewModel: BLEClientViewModel = viewModel()) {
     else {
         DeviceScreen(
             isDeviceConnected = uiState.isDeviceConnected,
-            serviceUuids = uiState.discoveredServicesUuids,
+            discoveredCharacteristics = uiState.discoveredCharacteristics,
             connect = viewModel::connectActiveDevice,
             discoverServices = viewModel::discoverActiveDeviceServices
         )
@@ -206,7 +207,7 @@ fun DeviceItem(deviceName: String?, selectDevice: () -> Unit) {
 @Composable
 fun DeviceScreen(
     isDeviceConnected: Boolean,
-    serviceUuids: List<String>,
+    discoveredCharacteristics: Map<String, List<String>>,
     connect: () -> Unit,
     discoverServices: () -> Unit
 ) {
@@ -219,8 +220,13 @@ fun DeviceScreen(
             Text("2. Discover Services")
         }
         LazyColumn {
-            items(serviceUuids) {
-                Text(it)
+            items(discoveredCharacteristics.keys.sorted()) { serviceUuid ->
+                Text(text = serviceUuid, fontWeight = FontWeight.Black)
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    discoveredCharacteristics[serviceUuid]?.forEach {
+                        Text(it)
+                    }
+                }
             }
         }
     }
@@ -240,7 +246,7 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     val uiState = combine(_uiState, isDeviceConnected, activeDeviceServices) { state, isDeviceConnected, services ->
         state.copy(
             isDeviceConnected = isDeviceConnected,
-            discoveredServicesUuids = services.map { it.uuid.toString() }
+            discoveredCharacteristics = services.associate { service -> Pair(service.uuid.toString(), service.characteristics.map { it.uuid.toString() }) }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BLEClientUIState())
 
@@ -303,7 +309,7 @@ data class BLEClientUIState(
     val foundDevices: List<BluetoothDevice> = emptyList(),
     val activeDevice: BluetoothDevice? = null,
     val isDeviceConnected: Boolean = false,
-    val discoveredServicesUuids: List<String> = emptyList(),
+    val discoveredCharacteristics: Map<String, List<String>> = emptyMap(),
 )
 
 @Preview
