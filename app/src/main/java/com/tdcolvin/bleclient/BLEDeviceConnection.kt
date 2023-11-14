@@ -7,8 +7,14 @@ import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
 import android.content.Context
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.util.UUID
+
+val CTF_SERVICE_UUID = UUID.fromString("8c380000-10bd-4fdb-ba21-1922d6cf860d")
+val PASSWORD_CHARACTERISTIC_UUID = UUID.fromString("8c380001-10bd-4fdb-ba21-1922d6cf860d")
+val NAME_CHARACTERISTIC_UUID = UUID.fromString("8c380002-10bd-4fdb-ba21-1922d6cf860d")
 
 @SuppressLint("MissingPermission")
 class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") constructor(
@@ -16,6 +22,7 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
     private val bluetoothDevice: BluetoothDevice
 ) {
     val isConnected = MutableStateFlow(false)
+    val passwordRead = MutableStateFlow<String?>(null)
     val services = MutableStateFlow<List<BluetoothGattService>>(emptyList())
 
     private val callback = object: BluetoothGattCallback() {
@@ -34,14 +41,16 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
             services.value = gatt.services
         }
 
+        @Deprecated("Deprecated in Java")
         override fun onCharacteristicRead(
             gatt: BluetoothGatt,
             characteristic: BluetoothGattCharacteristic,
-            value: ByteArray,
             status: Int
         ) {
-            super.onCharacteristicRead(gatt, characteristic, value, status)
-
+            super.onCharacteristicRead(gatt, characteristic, status)
+            if (characteristic.uuid == PASSWORD_CHARACTERISTIC_UUID) {
+                passwordRead.value = String(characteristic.value)
+            }
         }
     }
 
@@ -58,5 +67,14 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
 
     fun discoverServices() {
         gatt?.discoverServices()
+    }
+
+    fun readPassword() {
+        val service = gatt?.getService(CTF_SERVICE_UUID)
+        val characteristic = service?.getCharacteristic(PASSWORD_CHARACTERISTIC_UUID)
+        if (characteristic != null) {
+            val success = gatt?.readCharacteristic(characteristic)
+            Log.v("bluetooth", "Read status: $success")
+        }
     }
 }

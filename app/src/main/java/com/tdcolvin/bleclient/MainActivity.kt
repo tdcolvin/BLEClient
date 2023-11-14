@@ -119,8 +119,11 @@ fun MainScreen(viewModel: BLEClientViewModel = viewModel()) {
         DeviceScreen(
             isDeviceConnected = uiState.isDeviceConnected,
             discoveredCharacteristics = uiState.discoveredCharacteristics,
+            password = uiState.password,
             connect = viewModel::connectActiveDevice,
-            discoverServices = viewModel::discoverActiveDeviceServices
+            discoverServices = viewModel::discoverActiveDeviceServices,
+            readPassword = viewModel::readPasswordFromActiveDevice,
+            writeName = viewModel::writeNameToActiveDevice
         )
     }
 }
@@ -208,9 +211,14 @@ fun DeviceItem(deviceName: String?, selectDevice: () -> Unit) {
 fun DeviceScreen(
     isDeviceConnected: Boolean,
     discoveredCharacteristics: Map<String, List<String>>,
+    password: String?,
     connect: () -> Unit,
-    discoverServices: () -> Unit
+    discoverServices: () -> Unit,
+    readPassword: () -> Unit,
+    writeName: () -> Unit
 ) {
+    val foundTargetService = discoveredCharacteristics.contains(CTF_SERVICE_UUID.toString())
+
     Column {
         Text("Device connected: $isDeviceConnected")
         Button(onClick = connect) {
@@ -229,6 +237,15 @@ fun DeviceScreen(
                 }
             }
         }
+        Button(onClick = readPassword, enabled = isDeviceConnected && foundTargetService) {
+            Text("3. Read Password")
+        }
+        if (password != null) {
+            Text("Found password: $password")
+        }
+        Button(onClick = writeName, enabled = isDeviceConnected && foundTargetService) {
+            Text("4. Write Name")
+        }
     }
 }
 
@@ -241,12 +258,16 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     private val activeDeviceServices = activeConnection.flatMapLatest {
         it?.services ?: flowOf(emptyList())
     }
+    private val activeDevicePassword = activeConnection.flatMapLatest {
+        it?.passwordRead ?: flowOf(null)
+    }
 
     private val _uiState = MutableStateFlow(BLEClientUIState())
-    val uiState = combine(_uiState, isDeviceConnected, activeDeviceServices) { state, isDeviceConnected, services ->
+    val uiState = combine(_uiState, isDeviceConnected, activeDeviceServices, activeDevicePassword) { state, isDeviceConnected, services, password ->
         state.copy(
             isDeviceConnected = isDeviceConnected,
-            discoveredCharacteristics = services.associate { service -> Pair(service.uuid.toString(), service.characteristics.map { it.uuid.toString() }) }
+            discoveredCharacteristics = services.associate { service -> Pair(service.uuid.toString(), service.characteristics.map { it.uuid.toString() }) },
+            password = password
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BLEClientUIState())
 
@@ -288,6 +309,14 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
         activeConnection.value?.discoverServices()
     }
 
+    fun readPasswordFromActiveDevice() {
+        activeConnection.value?.readPassword()
+    }
+
+    fun writeNameToActiveDevice() {
+
+    }
+
     override fun onCleared() {
         super.onCleared()
 
@@ -310,6 +339,7 @@ data class BLEClientUIState(
     val activeDevice: BluetoothDevice? = null,
     val isDeviceConnected: Boolean = false,
     val discoveredCharacteristics: Map<String, List<String>> = emptyMap(),
+    val password: String? = null
 )
 
 @Preview
