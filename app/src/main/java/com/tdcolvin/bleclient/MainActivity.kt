@@ -222,10 +222,10 @@ fun DeviceScreen(
     val foundTargetService = discoveredCharacteristics.contains(CTF_SERVICE_UUID.toString())
 
     Column {
-        Text("Device connected: $isDeviceConnected")
         Button(onClick = connect) {
             Text("1. Connect")
         }
+        Text("Device connected: $isDeviceConnected")
         Button(onClick = discoverServices, enabled = isDeviceConnected) {
             Text("2. Discover Services")
         }
