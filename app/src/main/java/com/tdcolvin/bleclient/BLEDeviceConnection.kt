@@ -77,4 +77,14 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
             Log.v("bluetooth", "Read status: $success")
         }
     }
+
+    fun writeName() {
+        val service = gatt?.getService(CTF_SERVICE_UUID)
+        val characteristic = service?.getCharacteristic(NAME_CHARACTERISTIC_UUID)
+        if (characteristic != null) {
+            characteristic.value = "Tom".toByteArray()
+            val success = gatt?.writeCharacteristic(characteristic)
+            Log.v("bluetooth", "Write status: $success")
+        }
+    }
 }

@@ -120,6 +120,7 @@ fun MainScreen(viewModel: BLEClientViewModel = viewModel()) {
             isDeviceConnected = uiState.isDeviceConnected,
             discoveredCharacteristics = uiState.discoveredCharacteristics,
             password = uiState.password,
+            nameWrittenTimes = uiState.nameWrittenTimes,
             connect = viewModel::connectActiveDevice,
             discoverServices = viewModel::discoverActiveDeviceServices,
             readPassword = viewModel::readPasswordFromActiveDevice,
@@ -212,6 +213,7 @@ fun DeviceScreen(
     isDeviceConnected: Boolean,
     discoveredCharacteristics: Map<String, List<String>>,
     password: String?,
+    nameWrittenTimes: Int,
     connect: () -> Unit,
     discoverServices: () -> Unit,
     readPassword: () -> Unit,
@@ -244,7 +246,10 @@ fun DeviceScreen(
             Text("Found password: $password")
         }
         Button(onClick = writeName, enabled = isDeviceConnected && foundTargetService) {
-            Text("4. Write Name")
+            Text("4. Write Your Name")
+        }
+        if (nameWrittenTimes > 0) {
+            Text("Number of times name sent: $nameWrittenTimes")
         }
     }
 }
@@ -298,7 +303,7 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     @RequiresPermission(allOf = [PERMISSION_BLUETOOTH_CONNECT, PERMISSION_BLUETOOTH_SCAN])
     fun setActiveDevice(device: BluetoothDevice?) {
         activeConnection.value = device?.run { BLEDeviceConnection(application, device) }
-        _uiState.update { it.copy(activeDevice = device) }
+        _uiState.update { it.copy(activeDevice = device, nameWrittenTimes = 0) }
     }
     
     fun connectActiveDevice() {
@@ -314,7 +319,8 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     }
 
     fun writeNameToActiveDevice() {
-
+        activeConnection.value?.writeName()
+        _uiState.update { it.copy(nameWrittenTimes = it.nameWrittenTimes + 1) }
     }
 
     override fun onCleared() {
@@ -339,7 +345,8 @@ data class BLEClientUIState(
     val activeDevice: BluetoothDevice? = null,
     val isDeviceConnected: Boolean = false,
     val discoveredCharacteristics: Map<String, List<String>> = emptyMap(),
-    val password: String? = null
+    val password: String? = null,
+    val nameWrittenTimes: Int = 0
 )
 
 @Preview
