@@ -13,6 +13,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresPermission
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,10 +23,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -117,6 +121,10 @@ fun MainScreen(viewModel: BLEClientViewModel = viewModel()) {
     }
     else {
         DeviceScreen(
+            unselectDevice = {
+                viewModel.disconnectActiveDevice()
+                viewModel.setActiveDevice(null)
+            },
             isDeviceConnected = uiState.isDeviceConnected,
             discoveredCharacteristics = uiState.discoveredCharacteristics,
             password = uiState.password,
@@ -210,6 +218,7 @@ fun DeviceItem(deviceName: String?, selectDevice: () -> Unit) {
 
 @Composable
 fun DeviceScreen(
+    unselectDevice: () -> Unit,
     isDeviceConnected: Boolean,
     discoveredCharacteristics: Map<String, List<String>>,
     password: String?,
@@ -221,7 +230,9 @@ fun DeviceScreen(
 ) {
     val foundTargetService = discoveredCharacteristics.contains(CTF_SERVICE_UUID.toString())
 
-    Column {
+    Column(
+        Modifier.scrollable(rememberScrollState(), Orientation.Vertical)
+    ) {
         Button(onClick = connect) {
             Text("1. Connect")
         }
@@ -250,6 +261,10 @@ fun DeviceScreen(
         }
         if (nameWrittenTimes > 0) {
             Text("Number of times name sent: $nameWrittenTimes")
+        }
+
+        OutlinedButton(modifier = Modifier.padding(top = 40.dp),  onClick = unselectDevice) {
+            Text("Disconnect")
         }
     }
 }
@@ -309,6 +324,11 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun connectActiveDevice() {
         activeConnection.value?.connect()
+    }
+
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
+    fun disconnectActiveDevice() {
+        activeConnection.value?.disconnect()
     }
 
     @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
