@@ -305,19 +305,23 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
         activeConnection.value = device?.run { BLEDeviceConnection(application, device) }
         _uiState.update { it.copy(activeDevice = device, nameWrittenTimes = 0) }
     }
-    
+
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun connectActiveDevice() {
         activeConnection.value?.connect()
     }
 
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun discoverActiveDeviceServices() {
         activeConnection.value?.discoverServices()
     }
 
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun readPasswordFromActiveDevice() {
         activeConnection.value?.readPassword()
     }
 
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun writeNameToActiveDevice() {
         activeConnection.value?.writeName()
         _uiState.update { it.copy(nameWrittenTimes = it.nameWrittenTimes + 1) }

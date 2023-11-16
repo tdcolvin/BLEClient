@@ -1,6 +1,5 @@
 package com.tdcolvin.bleclient
 
-import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
@@ -16,7 +15,7 @@ val CTF_SERVICE_UUID: UUID = UUID.fromString("8c380000-10bd-4fdb-ba21-1922d6cf86
 val PASSWORD_CHARACTERISTIC_UUID: UUID = UUID.fromString("8c380001-10bd-4fdb-ba21-1922d6cf860d")
 val NAME_CHARACTERISTIC_UUID: UUID = UUID.fromString("8c380002-10bd-4fdb-ba21-1922d6cf860d")
 
-@SuppressLint("MissingPermission")
+@Suppress("DEPRECATION")
 class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") constructor(
     private val context: Context,
     private val bluetoothDevice: BluetoothDevice
@@ -61,14 +60,17 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
         gatt?.disconnect()
     }
 
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun connect() {
         gatt = bluetoothDevice.connectGatt(context, false, callback)
     }
 
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun discoverServices() {
         gatt?.discoverServices()
     }
 
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun readPassword() {
         val service = gatt?.getService(CTF_SERVICE_UUID)
         val characteristic = service?.getCharacteristic(PASSWORD_CHARACTERISTIC_UUID)
@@ -78,6 +80,7 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
         }
     }
 
+    @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun writeName() {
         val service = gatt?.getService(CTF_SERVICE_UUID)
         val characteristic = service?.getCharacteristic(NAME_CHARACTERISTIC_UUID)
