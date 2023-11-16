@@ -12,9 +12,9 @@ import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.UUID
 
-val CTF_SERVICE_UUID = UUID.fromString("8c380000-10bd-4fdb-ba21-1922d6cf860d")
-val PASSWORD_CHARACTERISTIC_UUID = UUID.fromString("8c380001-10bd-4fdb-ba21-1922d6cf860d")
-val NAME_CHARACTERISTIC_UUID = UUID.fromString("8c380002-10bd-4fdb-ba21-1922d6cf860d")
+val CTF_SERVICE_UUID: UUID = UUID.fromString("8c380000-10bd-4fdb-ba21-1922d6cf860d")
+val PASSWORD_CHARACTERISTIC_UUID: UUID = UUID.fromString("8c380001-10bd-4fdb-ba21-1922d6cf860d")
+val NAME_CHARACTERISTIC_UUID: UUID = UUID.fromString("8c380002-10bd-4fdb-ba21-1922d6cf860d")
 
 @SuppressLint("MissingPermission")
 class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") constructor(
