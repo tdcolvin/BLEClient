@@ -58,6 +58,8 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
     @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun disconnect() {
         gatt?.disconnect()
+        gatt?.close()
+        gatt = null
     }
 
     @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
