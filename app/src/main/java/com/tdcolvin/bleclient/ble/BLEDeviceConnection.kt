@@ -1,4 +1,4 @@
-package com.tdcolvin.bleclient
+package com.tdcolvin.bleclient.ble
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt

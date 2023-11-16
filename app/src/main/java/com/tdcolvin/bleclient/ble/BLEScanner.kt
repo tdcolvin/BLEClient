@@ -1,4 +1,4 @@
-package com.tdcolvin.bleclient
+package com.tdcolvin.bleclient.ble
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.update
 const val PERMISSION_BLUETOOTH_SCAN = "android.permission.BLUETOOTH_SCAN"
 const val PERMISSION_BLUETOOTH_CONNECT = "android.permission.BLUETOOTH_CONNECT"
 
-class BLEClient(context: Context) {
+class BLEScanner(context: Context) {
 
     private val bluetooth = context.getSystemService(Context.BLUETOOTH_SERVICE)
         as? BluetoothManager
