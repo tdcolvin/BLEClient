@@ -35,13 +35,23 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     private val activeDevicePassword = activeConnection.flatMapLatest {
         it?.passwordRead ?: flowOf(null)
     }
+    private val activeDeviceNameWrittenTimes = activeConnection.flatMapLatest {
+        it?.successfulNameWrites ?: flowOf(0)
+    }
 
     private val _uiState = MutableStateFlow(BLEClientUIState())
-    val uiState = combine(_uiState, isDeviceConnected, activeDeviceServices, activeDevicePassword) { state, isDeviceConnected, services, password ->
+    val uiState = combine(
+        _uiState,
+        isDeviceConnected,
+        activeDeviceServices,
+        activeDevicePassword,
+        activeDeviceNameWrittenTimes
+    ) { state, isDeviceConnected, services, password, nameWrittenTimes ->
         state.copy(
             isDeviceConnected = isDeviceConnected,
             discoveredCharacteristics = services.associate { service -> Pair(service.uuid.toString(), service.characteristics.map { it.uuid.toString() }) },
-            password = password
+            password = password,
+            nameWrittenTimes = nameWrittenTimes
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BLEClientUIState())
 
@@ -72,7 +82,7 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     @RequiresPermission(allOf = [PERMISSION_BLUETOOTH_CONNECT, PERMISSION_BLUETOOTH_SCAN])
     fun setActiveDevice(device: BluetoothDevice?) {
         activeConnection.value = device?.run { BLEDeviceConnection(application, device) }
-        _uiState.update { it.copy(activeDevice = device, nameWrittenTimes = 0) }
+        _uiState.update { it.copy(activeDevice = device) }
     }
 
     @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
@@ -98,7 +108,6 @@ class BLEClientViewModel(private val application: Application): AndroidViewModel
     @RequiresPermission(PERMISSION_BLUETOOTH_CONNECT)
     fun writeNameToActiveDevice() {
         activeConnection.value?.writeName()
-        _uiState.update { it.copy(nameWrittenTimes = it.nameWrittenTimes + 1) }
     }
 
     override fun onCleared() {

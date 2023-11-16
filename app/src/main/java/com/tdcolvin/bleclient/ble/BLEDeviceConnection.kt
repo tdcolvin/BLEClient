@@ -9,6 +9,7 @@ import android.content.Context
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import java.util.UUID
 
 val CTF_SERVICE_UUID: UUID = UUID.fromString("8c380000-10bd-4fdb-ba21-1922d6cf860d")
@@ -22,6 +23,7 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
 ) {
     val isConnected = MutableStateFlow(false)
     val passwordRead = MutableStateFlow<String?>(null)
+    val successfulNameWrites = MutableStateFlow(0)
     val services = MutableStateFlow<List<BluetoothGattService>>(emptyList())
 
     private val callback = object: BluetoothGattCallback() {
@@ -49,6 +51,17 @@ class BLEDeviceConnection @RequiresPermission("PERMISSION_BLUETOOTH_CONNECT") co
             super.onCharacteristicRead(gatt, characteristic, status)
             if (characteristic.uuid == PASSWORD_CHARACTERISTIC_UUID) {
                 passwordRead.value = String(characteristic.value)
+            }
+        }
+
+        override fun onCharacteristicWrite(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            status: Int
+        ) {
+            super.onCharacteristicWrite(gatt, characteristic, status)
+            if (characteristic.uuid == NAME_CHARACTERISTIC_UUID) {
+                successfulNameWrites.update { it + 1 }
             }
         }
     }

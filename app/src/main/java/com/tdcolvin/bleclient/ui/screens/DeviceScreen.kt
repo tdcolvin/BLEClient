@@ -60,7 +60,7 @@ fun DeviceScreen(
             Text("4. Write Your Name")
         }
         if (nameWrittenTimes > 0) {
-            Text("Number of times name sent: $nameWrittenTimes")
+            Text("Successful writes: $nameWrittenTimes")
         }
 
         OutlinedButton(modifier = Modifier.padding(top = 40.dp),  onClick = unselectDevice) {
